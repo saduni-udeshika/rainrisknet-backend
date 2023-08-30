@@ -1,8 +1,7 @@
 import pymongo
 
-# TODO: change mongo url
 client = pymongo.MongoClient(
-    "mongodb+srv://server:Sigen123@sigen.zkpx7.mongodb.net/sigen?retryWrites=true&w=majority"
+    "mongodb+srv://admin123:admin123@rainrisknet.nbql448.mongodb.net/?retryWrites=true&w=majority"
 )
 db = client["damage_assessment"]
 user_collection = db["user"]
@@ -37,4 +36,18 @@ def get_assessment_data(email):
                 "damage_percentage": x["damage_percentage"],
             }
         )
+    return data
+
+def get_all_assessment_data():
+    result = damage_reports_collection.find()
+    data = []
+    for x in result:
+        item = {
+            "_id": str(x["_id"]),
+            "disaster_type": x.get("disaster_type", ""),
+            "location": x.get("location", ""),
+            "date": x.get("date", ""),
+            "damage_percentage": x.get("damage_percentage", ""),
+        }
+        data.append(item)
     return data

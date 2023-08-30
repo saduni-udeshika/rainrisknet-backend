@@ -11,7 +11,8 @@ from utils import (
     validate_access,
 )
 from assessment import Assessment
-from db import get_user, add_user, add_assessment_data, get_assessment_data
+from db import get_user, add_user, add_assessment_data, get_assessment_data, get_all_assessment_data
+from knowledge_graph import generate_knowledge_graph, visualize_graph
 
 processor = Net()
 
@@ -175,3 +176,16 @@ def assessed():
     email = get_email_from_request(request)
     data = get_assessment_data(email)
     return jsonify(data), 200
+
+@app.route("/knowledge-graph", methods=["GET"])
+@cross_origin()
+def knowledge_graph():
+    access = auth_middleware(request)
+    if access is not True:
+        return access
+
+    assessment_data = get_all_assessment_data()
+    graph = generate_knowledge_graph(assessment_data)
+    visualize_graph(graph)
+
+    return {"status": "success", "message": "knowledge_graph_generated"}
