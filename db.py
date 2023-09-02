@@ -6,7 +6,9 @@ client = pymongo.MongoClient(
 db = client["damage_assessment"]
 user_collection = db["user"]
 damage_reports_collection = db["damage_reports"]
-
+flood_damage_reports_collection = db["flood_damage_reports"]
+landslide_damage_reports_collection = db["landslide_damage_reports"]
+disaster_forecast_reports_collection = db["disaster_forecast_reports"]
 
 def add_user(user_data):
     result = user_collection.insert_one(user_data)
@@ -38,6 +40,7 @@ def get_assessment_data(email):
         )
     return data
 
+
 def get_all_assessment_data():
     result = damage_reports_collection.find()
     data = []
@@ -51,3 +54,53 @@ def get_all_assessment_data():
         }
         data.append(item)
     return data
+
+
+
+def add_flood_assessment_data(payload):
+    result = flood_damage_reports_collection.insert_one(payload)
+    return result
+
+
+def get_flood_assessment_data():
+    result = flood_damage_reports_collection.find()
+    data = []
+    for x in result:
+        item = {
+            "_id": str(x["_id"]),
+            "disaster_type": x.get("disaster_type", ""),
+            "location": x.get("location", ""),
+            "date": x.get("date", ""),
+            "percentage_damage": x.get("percentage_damage", ""),
+        }
+        data.append(item)
+    return data
+
+
+def add_landslide_assessment_data(payload):
+    result = landslide_damage_reports_collection.insert_one(payload)
+    return result
+
+
+def get_landslide_assessment_data():
+    result = landslide_damage_reports_collection.find()
+    data = []
+    for x in result:
+        item = {
+            "_id": str(x["_id"]),
+            "disaster_type": x.get("disaster_type", ""),
+            "location": x.get("location", ""),
+            "date": x.get("date", ""),
+            "percentage_damage": x.get("percentage_damage", ""),
+        }
+        data.append(item)
+    return data    
+
+
+def add_disaster_forecast_data(payload):
+    result = disaster_forecast_reports_collection.insert_one(payload)
+    return result
+
+def get_disaster_forecast_reports():
+    reports = list(disaster_forecast_reports_collection.find({}, {'_id': 0}))
+    return reports

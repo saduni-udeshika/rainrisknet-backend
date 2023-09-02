@@ -1,6 +1,6 @@
 import datetime
 from net import Net
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS, cross_origin
 from utils import (
     get_image_path,
@@ -11,7 +11,15 @@ from utils import (
     validate_access,
 )
 from assessment import Assessment
-from db import get_user, add_user, add_assessment_data, get_assessment_data, get_all_assessment_data
+import io
+import matplotlib.pyplot as plt
+from db import get_user, add_user, add_assessment_data, get_assessment_data, add_flood_assessment_data, add_landslide_assessment_data, add_disaster_forecast_data, get_all_assessment_data, get_flood_assessment_data, get_disaster_forecast_reports, get_landslide_assessment_data
+import tensorflow as tf
+import numpy as np
+from flood_damage_predict_image import(preprocess_image)
+from landslide_damage_predict_image import(dice_coefficient, IMG_HEIGHT, IMG_WIDTH)
+from flask import jsonify
+from disaster_forecast_predict import predict_disaster 
 from knowledge_graph import generate_knowledge_graph, visualize_graph
 
 processor = Net()
@@ -99,7 +107,7 @@ def damage_percentage():
 
     # Insert assessment report data into MongoDB collection
     add_assessment_data(assessment_data)
-
+    
     return str(rounded_percentage)
 
 
@@ -177,6 +185,182 @@ def assessed():
     data = get_assessment_data(email)
     return jsonify(data), 200
 
+
+
+@app.route('/predict-image-flood-environmental', methods=['POST'])
+@cross_origin()
+def predict_image():
+    access = auth_middleware(request)
+    if access is not True:
+        return access
+    
+    uploaded_file = request.files['file']
+    user_image_path = get_image_path(uploaded_file.filename)
+    uploaded_file.save(user_image_path)
+    
+    date = request.form['date']
+    location = request.form['location']
+    disaster_type = request.form['disaster_type']
+    
+    # Load your trained model
+    model = tf.keras.models.load_model('flood_damage_model.h5')
+    
+    # Preprocess the user-provided image
+    input_arr = preprocess_image(user_image_path, target_size=(224, 224))
+    
+    # Predict the mask for the user-provided image
+    user_prediction = model.predict(np.array([input_arr]))
+    
+    # Define a threshold value
+    threshold = 0.35
+    
+    # Convert the predicted mask to binary
+    binary_mask = np.where(user_prediction > threshold, 1, 0)
+    
+    # Calculate the percentage of flood damage
+    percentage_damage = (np.sum(binary_mask) / np.prod(binary_mask.shape)) * 100
+    formatted_percentage = "{:.2f}".format(percentage_damage)
+  
+    response = {
+        "percentage_damage": formatted_percentage,
+        "date": date,
+        "location": location,
+        "disaster_type": disaster_type
+    }
+    
+    add_flood_assessment_data(response)
+
+    #return jsonify(response), 200
+    return str(response)
+
+
+@app.route("/predict-flood-environmental", methods=["POST"])
+@cross_origin()
+def predict_flood():
+    access = auth_middleware(request)
+    if access is not True:
+        return access
+    uploaded_file = request.files["file"]
+    image_path = get_image_path(uploaded_file.filename)
+    uploaded_file.save(image_path)
+    prediction = processor.predict_flood(image_path)
+    return prediction.title()
+
+
+@app.route("/assessed-flood-environmental-damage", methods=["GET"])
+@cross_origin()
+def get_flood_assessment():
+    data = get_flood_assessment_data()
+    return jsonify(data)
+
+if __name__ == '__main__':
+    app.run(debug=True)
+
+
+@app.route('/predict-image-landslide-environmental', methods=['POST'])
+@cross_origin()
+def predict_landslide():
+    access = auth_middleware(request)
+    if access is not True:
+        return access
+    
+    uploaded_file = request.files['file']
+    user_image_path = get_image_path(uploaded_file.filename)
+    uploaded_file.save(user_image_path)
+    
+    date = request.form['date']
+    location = request.form['location']
+    disaster_type = request.form['disaster_type']
+    
+    # Load your trained landslide model
+    custom_objects = {'dice_coefficient': dice_coefficient}
+    landslide_model = tf.keras.models.load_model('landslide_damage_model.h5', custom_objects=custom_objects)
+    
+    # Preprocess the user-provided image
+    user_image = tf.keras.preprocessing.image.load_img(user_image_path, target_size=(IMG_HEIGHT, IMG_WIDTH))
+    input_arr = tf.keras.preprocessing.image.img_to_array(user_image)
+    input_arr = input_arr / 255.0
+    
+    # Predict the mask for the user-provided image
+    user_prediction = landslide_model.predict(np.array([input_arr]))
+    
+    # Define a threshold value
+    threshold = 0.35
+    
+    # Convert the predicted mask to binary
+    binary_mask = np.where(user_prediction > threshold, 1, 0)
+    
+    # Calculate the percentage of landslide damage
+    percentage_damage = (np.sum(binary_mask) / np.prod(binary_mask.shape)) * 100
+    formatted_percentage = "{:.2f}".format(percentage_damage)
+     
+    response = {
+        "date": date,
+        "disaster_type": disaster_type,
+        "location": location,
+        "percentage_damage": formatted_percentage
+    }
+    
+    add_landslide_assessment_data(response)
+
+    #return jsonify(response), 200
+    return str(response)
+
+
+@app.route("/predict-landslide-environmental", methods=["POST"])
+@cross_origin()
+def predict_landslide_img():
+    access = auth_middleware(request)
+    if access is not True:
+        return access
+    uploaded_file = request.files["file"]
+    image_path = get_image_path(uploaded_file.filename)
+    uploaded_file.save(image_path)
+    prediction = processor.predict_landslide_img(image_path)
+    return prediction.title()
+
+
+@app.route("/assessed-landslide-environmental-damage", methods=["GET"])
+@cross_origin()
+def get_landslide_assessment():
+    data = get_landslide_assessment_data()
+    return jsonify(data)
+
+if __name__ == '__main__':
+    app.run(debug=True)
+
+
+@app.route('/predict-disaster', methods=['POST'])
+@cross_origin()
+def predict_disaster_route():
+    access = auth_middleware(request)
+    if access is not True:
+        return access
+
+    date = request.form['date']
+    location = request.form['location']
+
+    # Call the predict_disaster function from disaster_forecast_predict.py
+    prediction_result = predict_disaster(date, location)
+
+    add_disaster_forecast_data(prediction_result)
+
+    #return jsonify(prediction_result), 200
+    return str(prediction_result)
+
+
+@app.route('/get-disaster-forecasts', methods=['GET'])
+@cross_origin()
+def get_disaster_forecasts():
+    access = auth_middleware(request)
+    if access is not True:
+        return access
+
+    forecasts = get_disaster_forecast_reports()
+
+    return jsonify(forecasts), 200
+
+
 @app.route("/knowledge-graph", methods=["GET"])
 @cross_origin()
 def knowledge_graph():
@@ -189,3 +373,5 @@ def knowledge_graph():
     visualize_graph(graph)
 
     return {"status": "success", "message": "knowledge_graph_generated"}
+
+
