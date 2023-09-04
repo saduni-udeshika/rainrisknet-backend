@@ -10,7 +10,7 @@ import random
 import pickle  # Import the pickle library for saving label encoders
 
 # Load the dataset
-data = pd.read_csv('forecastmodeldata.csv')  # Replace with your actual file path
+data = pd.read_csv('forecastmodeldata.csv')  
 
 # Data Preprocessing
 features = ['Rainfalls_mm', 'Relative_Humidity_Day', 'Relative_Humidity_Night',

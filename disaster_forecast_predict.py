@@ -100,8 +100,8 @@ def predict_disaster(date, location):
     # Make predictions using the model
     predictions = model.predict(input_features)
 
-    # Define shelter locations (latitude, longitude) in your area
-    shelter_locations = data[['Latitude', 'Longitude']].values  # Use the 'Latitude' and 'Longitude' columns from your dataset
+    # Define shelter locations (latitude, longitude) 
+    shelter_locations = data[['Latitude', 'Longitude']].values  
 
     # Get latitude and longitude from input_data
     lat = input_data['Latitude'].values[0]

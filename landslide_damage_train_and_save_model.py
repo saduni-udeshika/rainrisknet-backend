@@ -37,8 +37,8 @@ masks = np.array(masks)
 
 X_train, X_valid, y_train, y_valid = train_test_split(images, masks, test_size=0.15, random_state=42)
 
-# Define the number of output channels for your model
-OUTPUT_CHANNELS = 3  # Adjust this value according to your needs
+# Define the number of output channels for model
+OUTPUT_CHANNELS = 3  
 
 def unet():
     inputs = tf.keras.layers.Input(shape=(IMG_HEIGHT, IMG_WIDTH, 3))
