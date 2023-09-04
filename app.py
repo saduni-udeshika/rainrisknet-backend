@@ -13,7 +13,7 @@ from utils import (
 from assessment import Assessment
 import io
 import matplotlib.pyplot as plt
-from db import get_user, add_user, add_assessment_data, get_assessment_data, add_flood_assessment_data, add_landslide_assessment_data, add_disaster_forecast_data, get_all_assessment_data, get_flood_assessment_data, get_disaster_forecast_reports, get_landslide_assessment_data
+from db import get_user, add_user, add_assessment_data, get_assessment_data, add_flood_assessment_data, add_landslide_assessment_data, add_disaster_forecast_data, get_all_assessment_data, get_flood_assessment_data, get_disaster_forecast_reports, get_landslide_assessment_data, get_landslide_damage_data, get_disaster_forecast_data
 import tensorflow as tf
 import numpy as np
 from flood_damage_predict_image import(preprocess_image)
@@ -368,8 +368,19 @@ def knowledge_graph():
     if access is not True:
         return access
 
-    assessment_data = get_all_assessment_data()
-    graph = generate_knowledge_graph(assessment_data)
+    # Fetch data from all relevant collections
+    damage_reports_data = get_all_assessment_data()
+    flood_damage_data = get_all_assessment_data()
+    landslide_damage_data = get_landslide_damage_data()
+    forecast_reports = get_disaster_forecast_data()
+
+    # Combine all data
+    all_data = damage_reports_data + flood_damage_data + landslide_damage_data
+
+    # Generate the knowledge graph
+    graph = generate_knowledge_graph(all_data, forecast_reports)
+
+    # Visualize the graph
     visualize_graph(graph)
 
     return {"status": "success", "message": "knowledge_graph_generated"}
