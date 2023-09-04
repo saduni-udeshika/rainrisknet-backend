@@ -41,6 +41,7 @@ def get_assessment_data(email):
     return data
 
 
+
 def get_all_assessment_data():
     result = damage_reports_collection.find()
     data = []
@@ -53,7 +54,39 @@ def get_all_assessment_data():
             "damage_percentage": x.get("damage_percentage", ""),
         }
         data.append(item)
+
+    result = flood_damage_reports_collection.find()
+    for x in result:
+        item = {
+            "_id": str(x["_id"]),
+            "disaster_type": x.get("disaster_type", ""),
+            "location": x.get("location", ""),
+            "date": x.get("date", ""),
+            "percentage_damage": x.get("percentage_damage", ""),
+        }
+        data.append(item)
+        
     return data
+
+
+def get_landslide_damage_data():
+    result = landslide_damage_reports_collection.find()
+    data = []
+    for x in result:
+        item = {
+            "_id": str(x["_id"]),
+            "disaster_type": x.get("disaster_type", ""),
+            "location": x.get("location", ""),
+            "date": x.get("date", ""),
+            "percentage_damage": x.get("percentage_damage", ""),
+        }
+        data.append(item)
+    return data
+
+
+def get_disaster_forecast_data():
+    reports = list(disaster_forecast_reports_collection.find({}, {'_id': 0}))
+    return reports
 
 
 
