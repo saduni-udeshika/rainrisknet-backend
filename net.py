@@ -13,8 +13,7 @@ WEIGHTS_SAVE_FILE = WEIGHTS_SAVE_DIR + '/data'
 batch_size = 32
 img_height = 180
 img_width = 180
-epochs = 25
-
+epochs = 20
 
 class Net:
 

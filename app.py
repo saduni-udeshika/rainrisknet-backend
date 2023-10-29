@@ -10,7 +10,7 @@ from utils import (
     verify_password,
     validate_access,
 )
-from assessment import Assessment
+from assessment import BuildingDamageAssessor
 import io
 import matplotlib.pyplot as plt
 from db import get_user, add_user, add_assessment_data, get_assessment_data, add_flood_assessment_data, add_landslide_assessment_data, add_disaster_forecast_data, get_all_assessment_data, get_flood_assessment_data, get_disaster_forecast_reports, get_landslide_assessment_data, get_landslide_damage_data, get_disaster_forecast_data
@@ -21,8 +21,11 @@ from landslide_damage_predict_image import(dice_coefficient, IMG_HEIGHT, IMG_WID
 from flask import jsonify
 from disaster_forecast_predict import predict_disaster 
 from knowledge_graph import generate_knowledge_graph, visualize_graph
+from building_damage_classifier import BuildingDamageClassifier
 
 processor = Net()
+# Initialize the BuildingDamageClassifier with the model path
+building_damage_classifier = BuildingDamageClassifier('building_damage_model.h5')
 
 app = Flask(__name__)
 cors = CORS(app)
@@ -78,6 +81,8 @@ def damage_percentage():
     location = request.form.get("location")
     date_str = request.form.get("date")
 
+    date_str = request.form.get("date")
+
     if not date_str:
         return jsonify(error="Date field is missing or empty"), 400
 
@@ -90,25 +95,32 @@ def damage_percentage():
     image2_path = get_image_path(uploaded_file2.filename)
     uploaded_file1.save(image1_path)
     uploaded_file2.save(image2_path)
-    percentage = Assessment.damage_percentage(image1_path, image2_path)
-    rounded_percentage = round(percentage, 2)  # Round off to 2 decimal places
+    # Classify the uploaded images for building damage
+    classification1 = building_damage_classifier.classify_image(image1_path)
+    classification2 = building_damage_classifier.classify_image(image2_path)
 
-    # Convert date to datetime with zero time component
-    datetime_with_zero_time = datetime.datetime.combine(date, datetime.time())
+    # Initialize the BuildingDamageAssessor class
+    damage_assessor = BuildingDamageAssessor()
 
-    # Prepare the assessment report data
+    # Calculate and return the building damage percentage
+    rounded_percentage = damage_assessor.calculate_percentage(image1_path, image2_path)
+
+    # Store the classification results in the database
+    classification_data = {
+        "image1_classification": classification1,
+        "image2_classification": classification2,
+    }
     assessment_data = {
         "disaster_type": disaster_type,
         "location": location,
-        "date": datetime_with_zero_time,
+        "date": date_str,
         "damage_percentage": rounded_percentage,
         "email": email,
+        "classification_data": classification_data,
     }
-
-    # Insert assessment report data into MongoDB collection
     add_assessment_data(assessment_data)
-    
-    return str(rounded_percentage)
+
+    return jsonify({"damage_percentage": rounded_percentage})
 
 
 @app.route("/signup", methods=["POST"])
