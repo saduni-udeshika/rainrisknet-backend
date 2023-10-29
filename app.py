@@ -13,7 +13,7 @@ from utils import (
 from assessment import BuildingDamageAssessor
 import io
 import matplotlib.pyplot as plt
-from db import get_user, add_user, add_assessment_data, get_assessment_data, add_flood_assessment_data, add_landslide_assessment_data, add_disaster_forecast_data, get_all_assessment_data, get_flood_assessment_data, get_disaster_forecast_reports, get_landslide_assessment_data, get_landslide_damage_data, get_disaster_forecast_data
+from db import get_user, add_user, add_assessment_data, get_assessment_data, add_flood_assessment_data, add_landslide_assessment_data, add_disaster_forecast_data, get_all_assessment_data, get_flood_assessment_data, get_disaster_forecast_reports, get_landslide_assessment_data, get_landslide_damage_data, get_disaster_forecast_data, add_ada_derana_scraped_data, add_floodlist_scraped_data, add_disaster_report_forms, get_floodlist_news, get_adaderana_news
 import tensorflow as tf
 import numpy as np
 from flood_damage_predict_image import(preprocess_image)
@@ -21,6 +21,9 @@ from landslide_damage_predict_image import(dice_coefficient, IMG_HEIGHT, IMG_WID
 from flask import jsonify
 from disaster_forecast_predict import predict_disaster 
 from knowledge_graph import generate_knowledge_graph, visualize_graph
+from humanitarian_risk_assessment import fetch_data_from_web
+from FloodList_Data_Scraping import fetch_floodlist_data_from_web
+from building_damage_classifier import BuildingDamageClassifier
 from building_damage_classifier import BuildingDamageClassifier
 
 processor = Net()
@@ -398,3 +401,91 @@ def knowledge_graph():
     return {"status": "success", "message": "knowledge_graph_generated"}
 
 
+@app.route('/adaderana_scrape', methods=['POST'])
+@cross_origin()
+def adaderana_scraping_rout():
+    access = auth_middleware(request)
+    if access is not True:
+        return access
+    
+    user_query = request.form['user_query']
+    # Call the scraping function from humanitarian_risk_assessment.py
+    data = fetch_data_from_web(user_query)
+    floodlist_data = fetch_floodlist_data_from_web()
+    # data_to_insert = data.to_dict('records')
+    add_ada_derana_scraped_data(data)
+    add_floodlist_scraped_data(floodlist_data)
+    #return jsonify(prediction_result), 200
+    return str(data)
+
+
+@app.route('/disaster_report_form', methods=['POST'])
+@cross_origin()
+def disaster_report():
+    access = auth_middleware(request)
+    if access is not True:
+        return access
+    
+    # Capture data from the form
+    incdnt_date = request.form['incdnt_date']
+    report_date_time = datetime.datetime.combine(datetime.date.today(), datetime.time.min)
+    location = request.form['location']
+    spec_name = request.form['spec_name']
+    disaster_type = request.form['disaster_type']
+    severity_level = request.form['severity_level']
+    death_count = int(request.form['death_count'])
+    injured_count = int(request.form['injured_count'])
+    missing_count = int(request.form['missing_count'])
+    evacuated_count = int(request.form['evacuated_count'])
+    medical_availability = request.form['medical_availability']
+    hospitalized_count = int(request.form['hospitalized_count'])
+    clean_water_availability = request.form['clean_water_availability']
+    food_availability = request.form['food_availability']
+    shelter_availability = request.form['shelter_availability']
+    communication_disruption = request.form['communication_disruption']
+    transport_disruption = request.form['transport_disruption']
+    additional_comment = request.form['additional_comment']
+
+    # Create a dictionary with the captured data
+    report = {
+        'incdnt_date' : incdnt_date,
+        'report_date_time': report_date_time,
+        'location': location,
+        'spec_name': spec_name,
+        'disaster_type': disaster_type,
+        'severity_level': severity_level,
+        'death_count': death_count,
+        'injured_count': injured_count,
+        'missing_count': missing_count,
+        'evacuated_count': evacuated_count,
+        'medical_availability': medical_availability,
+        'hospitalized_count': hospitalized_count,
+        'clean_water_availability': clean_water_availability,
+        'food_availability': food_availability,
+        'shelter_availability': shelter_availability,
+        'communication_disruption': communication_disruption,
+        'transport_disruption': transport_disruption,
+        'additional_comment': additional_comment
+    }
+
+    add_disaster_report_forms(report)
+    #return jsonify(prediction_result), 200
+    return str(report)
+
+@app.route('/get-news', methods=['GET'])
+@cross_origin()
+def get_disaster_news():
+    access = auth_middleware(request)
+    if access is not True:
+        return access
+    disaster_news = get_floodlist_news()
+    return jsonify(disaster_news), 200
+
+@app.route('/get-adaderana', methods=['GET'])
+@cross_origin()
+def get_adaderana():
+    access = auth_middleware(request)
+    if access is not True:
+        return access
+    adaderana_news = get_adaderana_news()
+    return jsonify(adaderana_news), 200
